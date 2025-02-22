@@ -9,513 +9,496 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 
-class TestUygulamasi:
+class TestApplication:
     def __init__(self):
-        self.pencere = tk.Tk()
-        self.pencere.title("Test Case Yazıcı")
+        self.window = tk.Tk()
+        self.window.title("Test Case Writer")
         
-            # Pencereyi ekranın %80'i boyutunda başlat
-        ekran_genislik = self.pencere.winfo_screenwidth()
-        ekran_yukseklik = self.pencere.winfo_screenheight()
-        pencere_genislik = int(ekran_genislik * 0.8)
-        pencere_yukseklik = int(ekran_yukseklik * 0.8)
+        screen_width = self.window.winfo_screenwidth()
+        screen_height = self.window.winfo_screenheight()
+        window_width = int(screen_width * 0.8)
+        window_height = int(screen_height * 0.8)
         
-        # Pencereyi ortala
-        x = (ekran_genislik - pencere_genislik) // 2
-        y = (ekran_yukseklik - pencere_yukseklik) // 2
-        self.pencere.geometry(f"{pencere_genislik}x{pencere_yukseklik}+{x}+{y}")
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        self.window.geometry(f"{window_width}x{window_height}+{x}+{y}")
         
-        # Pencere yeniden boyutlandırılabilir
-        self.pencere.grid_rowconfigure(0, weight=1)
-        self.pencere.grid_columnconfigure(0, weight=1)
+        self.window.grid_rowconfigure(0, weight=1)
+        self.window.grid_columnconfigure(0, weight=1)
         
-        self.test_basligi = ""
-        self.test_maddeleri = []
-        self.secili_madde_index = None
+        self.test_title = ""
+        self.test_items = []
+        self.selected_item_index = None
         
-        # Tests dizini kontrolü
-        self.tests_dizini = "tests"
-        if not os.path.exists(self.tests_dizini):
-            os.makedirs(self.tests_dizini)
+        self.tests_directory = "tests"
+        if not os.path.exists(self.tests_directory):
+            os.makedirs(self.tests_directory)
             
-        self.ana_menu_olustur()
+        self.create_main_menu()
         
-    def ana_menu_olustur(self):
-        for widget in self.pencere.winfo_children():
+    def create_main_menu(self):
+        for widget in self.window.winfo_children():
             widget.destroy()
             
-        self.pencere.title("Test Case Yazıcı - Ana Menü")
+        self.window.title("Test Case Writer - Main Menu")
         
-        # Ana frame'i genişleyebilir yap
-        ana_frame = ttk.Frame(self.pencere, padding="10")
-        ana_frame.grid(row=0, column=0, sticky="nsew")
-        ana_frame.grid_rowconfigure(2, weight=1)
-        ana_frame.grid_columnconfigure(0, weight=1)
+        main_frame = ttk.Frame(self.window, padding="10")
+        main_frame.grid(row=0, column=0, sticky="nsew")
+        main_frame.grid_rowconfigure(2, weight=1)
+        main_frame.grid_columnconfigure(0, weight=1)
         
-        # Başlık
-        ttk.Label(ana_frame, text="Test Case Yazıcı", 
-                 font=("Arial", 20, "bold")).grid(row=0, column=0, pady=10)
+        ttk.Label(main_frame, text="Test Case Writer", font=("Arial", 20, "bold")).grid(row=0, column=0, pady=10)
         
-        # Yeni test butonu
-        ttk.Button(ana_frame, text="Yeni Test Oluştur", 
-                  command=self.yeni_test_baslat).grid(row=1, column=0, pady=5)
+        ttk.Button(main_frame, text="Create New Test", command=self.start_new_test).grid(row=1, column=0, pady=5)
         
-        # Geçmiş testler frame
-        testler_frame = ttk.LabelFrame(ana_frame, text="Geçmiş Testler", padding="5")
-        testler_frame.grid(row=2, column=0, sticky="nsew", pady=5)
-        testler_frame.grid_rowconfigure(0, weight=1)
-        testler_frame.grid_columnconfigure(0, weight=1)
+        tests_frame = ttk.LabelFrame(main_frame, text="Past Tests", padding="5")
+        tests_frame.grid(row=2, column=0, sticky="nsew", pady=5)
+        tests_frame.grid_rowconfigure(0, weight=1)
+        tests_frame.grid_columnconfigure(0, weight=1)
         
-        # Liste ve scrollbar container
-        liste_frame = ttk.Frame(testler_frame)
-        liste_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
-        liste_frame.grid_rowconfigure(0, weight=1)
-        liste_frame.grid_columnconfigure(0, weight=1)
+        list_frame = ttk.Frame(tests_frame)
+        list_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        list_frame.grid_rowconfigure(0, weight=1)
+        list_frame.grid_columnconfigure(0, weight=1)
         
-        # Test listesi
-        self.test_listbox = tk.Listbox(liste_frame)
+        self.test_listbox = tk.Listbox(list_frame)
         self.test_listbox.grid(row=0, column=0, sticky="nsew")
-        self.test_listbox.bind('<Double-Button-1>', self.test_ac_listeden)
+        self.test_listbox.bind('<Double-Button-1>', self.open_test_from_list)
         
-        # Scrollbar
-        scrollbar = ttk.Scrollbar(liste_frame, orient="vertical", command=self.test_listbox.yview)
+        scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.test_listbox.yview)
         scrollbar.grid(row=0, column=1, sticky="ns")
         self.test_listbox.configure(yscrollcommand=scrollbar.set)
         
-        # Butonlar frame
-        butonlar_frame = ttk.Frame(testler_frame)
-        butonlar_frame.grid(row=1, column=0, pady=5)
+        buttons_frame = ttk.Frame(tests_frame)
+        buttons_frame.grid(row=1, column=0, pady=5)
         
-        ttk.Button(butonlar_frame, text="Seçili Testi Aç", 
-                  command=self.test_ac_buton).grid(row=0, column=0, padx=5)
-        ttk.Button(butonlar_frame, text="Seçili Testi Sil", 
-                  command=self.test_sil).grid(row=0, column=1, padx=5)
+        ttk.Button(buttons_frame, text="Open Selected Test", command=self.open_test_button).grid(row=0, column=0, padx=5)
+        ttk.Button(buttons_frame, text="Delete Selected Test", command=self.delete_test).grid(row=0, column=1, padx=5)
         
-        self.testleri_listele()
+        self.list_tests()
 
-    def testleri_listele(self):
+    def list_tests(self):
         self.test_listbox.delete(0, tk.END)
-        for dosya in sorted(os.listdir(self.tests_dizini)):
-            if dosya.endswith('.json'):
-                with open(os.path.join(self.tests_dizini, dosya), 'r', encoding='utf-8') as f:
-                    test_verisi = json.load(f)
-                    self.test_listbox.insert(tk.END, test_verisi["baslik"])
+        for file in sorted(os.listdir(self.tests_directory)):
+            if file.endswith('.json'):
+                with open(os.path.join(self.tests_directory, file), 'r', encoding='utf-8') as f:
+                    test_data = json.load(f)
+                    self.test_listbox.insert(tk.END, test_data["title"])
 
-    def test_ac_listeden(self, event):
-        if self.test_listbox.curselection():
-            self.test_ac_buton()
+    def open_test_from_list(self, event):
+            if self.test_listbox.curselection():
+                self.open_test_button()
 
-    def test_ac_buton(self):
+    def open_test_button(self):
         if not self.test_listbox.curselection():
-            messagebox.showwarning("Uyarı", "Lütfen bir test seçin!")
+            messagebox.showwarning("Warning", "Please select a test!")
             return
             
-        secili_test = self.test_listbox.get(self.test_listbox.curselection())
-        dosya_adi = os.path.join(self.tests_dizini, f"{secili_test}.json")
+        selected_test = self.test_listbox.get(self.test_listbox.curselection())
+        file_name = os.path.join(self.tests_directory, f"{selected_test}.json")
         
         try:
-            with open(dosya_adi, 'r', encoding='utf-8') as f:
-                test_verisi = json.load(f)
+            with open(file_name, 'r', encoding='utf-8') as f:
+                test_data = json.load(f)
             
-            self.test_basligi = test_verisi["baslik"]
-            self.test_maddeleri = test_verisi["maddeler"]
-            self.test_penceresi_olustur()
+            self.test_title = test_data["title"]
+            self.test_items = test_data["items"]
+            self.create_test_window()
             
         except Exception as e:
-            messagebox.showerror("Hata", f"Test açılırken bir hata oluştu: {str(e)}")
+            messagebox.showerror("Error", f"An error occurred while opening the test: {str(e)}")
 
-    def test_sil(self):
+    def delete_test(self):
         if not self.test_listbox.curselection():
-            messagebox.showwarning("Uyarı", "Lütfen bir test seçin!")
+            messagebox.showwarning("Warning", "Please select a test!")
             return
             
-        secili_test = self.test_listbox.get(self.test_listbox.curselection())
-        if messagebox.askyesno("Onay", f"{secili_test} testini silmek istediğinizden emin misiniz?"):
-            dosya_adi = os.path.join(self.tests_dizini, f"{secili_test}.json")
+        selected_test = self.test_listbox.get(self.test_listbox.curselection())
+        if messagebox.askyesno("Confirmation", f"Are you sure you want to delete the test {selected_test}?"):
+            file_name = os.path.join(self.tests_directory, f"{selected_test}.json")
             try:
-                os.remove(dosya_adi)
-                self.testleri_listele()
-                messagebox.showinfo("Başarılı", "Test başarıyla silindi!")
+                os.remove(file_name)
+                self.list_tests()
+                messagebox.showinfo("Success", "Test deleted successfully!")
             except Exception as e:
-                messagebox.showerror("Hata", f"Test silinirken bir hata oluştu: {str(e)}")
+                messagebox.showerror("Error", f"An error occurred while deleting the test: {str(e)}")
 
-    def yeni_test_baslat(self):
-        self.test_basligi = ""
-        self.test_maddeleri = []
-        self.baslik_penceresi_olustur()
+    def start_new_test(self):
+        self.test_title = ""
+        self.test_items = []
+        self.create_title_window()
 
-    def baslik_penceresi_olustur(self):
-        # Mevcut widget'ları temizle
-        for widget in self.pencere.winfo_children():
+    def create_title_window(self):
+        # Clear existing widgets
+        for widget in self.window.winfo_children():
             widget.destroy()
             
-        self.pencere.title("Test Oluştur - Başlık")
+        self.window.title("Create Test - Title")
         
-        baslik_frame = ttk.Frame(self.pencere, padding="20")
-        baslik_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        title_frame = ttk.Frame(self.window, padding="20")
+        title_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        ttk.Label(baslik_frame, text="Test Başlığını Giriniz:", 
+        ttk.Label(title_frame, text="Enter Test Title:", 
                  font=("Arial", 12)).grid(row=0, column=0, pady=10)
         
-        self.baslik_giris = ttk.Entry(baslik_frame, width=40)
-        self.baslik_giris.grid(row=1, column=0, pady=10)
+        self.title_entry = ttk.Entry(title_frame, width=40)
+        self.title_entry.grid(row=1, column=0, pady=10)
         
-        butonlar_frame = ttk.Frame(baslik_frame)
-        butonlar_frame.grid(row=2, column=0, pady=10)
+        button_frame = ttk.Frame(title_frame)
+        button_frame.grid(row=2, column=0, pady=10)
         
-        ttk.Button(butonlar_frame, text="Ana Menüye Dön", 
-                  command=self.ana_menu_olustur).grid(row=0, column=0, padx=5)
-        ttk.Button(butonlar_frame, text="Devam Et", 
-                  command=self.test_penceresi_olustur).grid(row=0, column=1, padx=5)
+        ttk.Button(button_frame, text="Return to Main Menu", 
+                  command=self.create_main_menu).grid(row=0, column=0, padx=5)
+        ttk.Button(button_frame, text="Continue", 
+                  command=self.create_test_window).grid(row=0, column=1, padx=5)
 
-    def test_penceresi_olustur(self):
-        if not self.test_basligi and not self.baslik_giris.get().strip():
-            messagebox.showerror("Hata", "Lütfen bir test başlığı giriniz!")
+    def create_test_window(self):
+        if not self.test_title and not self.title_entry.get().strip():
+            messagebox.showerror("Error", "Please enter a test title!")
             return
                     
-        if not self.test_basligi:
-            self.test_basligi = self.baslik_giris.get()
+        if not self.test_title:
+            self.test_title = self.title_entry.get()
 
-        # Mevcut widget'ları temizle
-        for widget in self.pencere.winfo_children():
+        # Clear existing widgets
+        for widget in self.window.winfo_children():
             widget.destroy()
 
-        # Ana frame
-        self.ana_frame = ttk.Frame(self.pencere, padding="10")
-        self.ana_frame.grid(row=0, column=0, sticky="nsew")
-        self.ana_frame.grid_rowconfigure(1, weight=1)
-        self.ana_frame.grid_columnconfigure(0, weight=1)
-        self.ana_frame.grid_columnconfigure(1, weight=1)
+        # Main frame
+        self.main_frame = ttk.Frame(self.window, padding="10")
+        self.main_frame.grid(row=0, column=0, sticky="nsew")
+        self.main_frame.grid_rowconfigure(1, weight=1)
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(1, weight=1)
 
-        # Ana frame'e tıklama eventi ekle
-        self.ana_frame.bind('<Button-1>', self.frame_tiklama)
-        #baslik
-        ttk.Label(self.ana_frame, text=f"Test: {self.test_basligi}", 
+        # Add click event to the main frame
+        self.main_frame.bind('<Button-1>', self.frame_click)
+        
+        # Title
+        ttk.Label(self.main_frame, text=f"Test: {self.test_title}", 
             font=("Arial", 12, "bold")).grid(row=0, column=0, columnspan=2, pady=5)
-        # Sol panel'e tıklama eventi ekle
-        sol_panel = ttk.LabelFrame(self.ana_frame, text="Test Maddesi", padding="5")
-        sol_panel.grid(row=1, column=0, sticky="nsew", padx=5)
-        sol_panel.grid_columnconfigure(0, weight=1)
-        sol_panel.bind('<Button-1>', self.frame_tiklama)
-            # Tüm label'lara tıklama eventi ekle
-        for label in sol_panel.winfo_children():
+        
+        # Left panel
+        left_panel = ttk.LabelFrame(self.main_frame, text="Test Item", padding="5")
+        left_panel.grid(row=1, column=0, sticky="nsew", padx=5)
+        left_panel.grid_columnconfigure(0, weight=1)
+        left_panel.bind('<Button-1>', self.frame_click)
+        
+        # Add click event to all labels
+        for label in left_panel.winfo_children():
             if isinstance(label, ttk.Label):
-                label.bind('<Button-1>', self.frame_tiklama)
+                label.bind('<Button-1>', self.frame_click)
                 
-        # Madde girişi
-        ttk.Label(sol_panel, text="Madde:").grid(row=0, column=0, sticky="w", pady=2)
-        self.madde_giris = ttk.Entry(sol_panel)
-        self.madde_giris.grid(row=1, column=0, sticky="ew", pady=2)
+        # Item entry
+        ttk.Label(left_panel, text="Item:").grid(row=0, column=0, sticky="w", pady=2)
+        self.item_entry = ttk.Entry(left_panel)
+        self.item_entry.grid(row=1, column=0, sticky="ew", pady=2)
         
-        # Açıklama
-        ttk.Label(sol_panel, text="Açıklama:").grid(row=2, column=0, sticky="w", pady=2)
-        self.aciklama_giris = ScrolledText(sol_panel, height=4)
-        self.aciklama_giris.grid(row=3, column=0, sticky="ew", pady=2)
+        # Description
+        ttk.Label(left_panel, text="Description:").grid(row=2, column=0, sticky="w", pady=2)
+        self.description_entry = ScrolledText(left_panel, height=4)
+        self.description_entry.grid(row=3, column=0, sticky="ew", pady=2)
         
-        # Adımlar
-        ttk.Label(sol_panel, text="Adımlar:").grid(row=4, column=0, sticky="w", pady=2)
-        self.adimlar_giris = ScrolledText(sol_panel, height=4)
-        self.adimlar_giris.grid(row=5, column=0, sticky="ew", pady=2)
+        # Steps
+        ttk.Label(left_panel, text="Steps:").grid(row=4, column=0, sticky="w", pady=2)
+        self.steps_entry = ScrolledText(left_panel, height=4)
+        self.steps_entry.grid(row=5, column=0, sticky="ew", pady=2)
         
         # Input
-        ttk.Label(sol_panel, text="Input:").grid(row=6, column=0, sticky="w", pady=2)
-        self.input_giris = ScrolledText(sol_panel, height=4)
-        self.input_giris.grid(row=7, column=0, sticky="ew", pady=2)
+        ttk.Label(left_panel, text="Input:").grid(row=6, column=0, sticky="w", pady=2)
+        self.input_entry = ScrolledText(left_panel, height=4)
+        self.input_entry.grid(row=7, column=0, sticky="ew", pady=2)
 
-        # output
-        ttk.Label(sol_panel, text="Output:").grid(row=8, column=0, sticky="w", pady=2)
-        self.output_giris = ScrolledText(sol_panel, height=4)
-        self.output_giris.grid(row=9, column=0, sticky="ew", pady=2)
+        # Output
+        ttk.Label(left_panel, text="Output:").grid(row=8, column=0, sticky="w", pady=2)
+        self.output_entry = ScrolledText(left_panel, height=4)
+        self.output_entry.grid(row=9, column=0, sticky="ew", pady=2)
         
-        # Madde butonları
-        madde_butonlar = ttk.Frame(sol_panel)
-        madde_butonlar.grid(row=10, column=0, pady=5)
-        madde_butonlar.bind('<Button-1>', self.frame_tiklama)
+        # Item buttons
+        item_buttons = ttk.Frame(left_panel)
+        item_buttons.grid(row=10, column=0, pady=5)
+        item_buttons.bind('<Button-1>', self.frame_click)
         
-        self.ekle_buton = ttk.Button(madde_butonlar, text="Madde Ekle", command=self.madde_ekle)
-        self.ekle_buton.grid(row=0, column=0, padx=2)
+        self.add_button = ttk.Button(item_buttons, text="Add Item", command=self.add_item)
+        self.add_button.grid(row=0, column=0, padx=2)
         
-        self.guncelle_buton = ttk.Button(madde_butonlar, text="Maddeyi Güncelle", 
-                                        command=self.madde_guncelle, state='disabled')
-        self.guncelle_buton.grid(row=0, column=1, padx=2)
+        self.update_button = ttk.Button(item_buttons, text="Update Item", 
+                                        command=self.update_item, state='disabled')
+        self.update_button.grid(row=0, column=1, padx=2)
         
-        # Sağ panel (Madde Listesi)
-        sag_panel = ttk.LabelFrame(self.ana_frame, text="Test Maddeleri", padding="5")
-        sag_panel.grid(row=1, column=1, sticky="nsew", padx=5)
-        sag_panel.grid_rowconfigure(0, weight=1)
-        sag_panel.grid_columnconfigure(0, weight=1)
-        sag_panel.bind('<Button-1>', self.frame_tiklama)
+        # Right panel (Item List)
+        right_panel = ttk.LabelFrame(self.main_frame, text="Test Items", padding="5")
+        right_panel.grid(row=1, column=1, sticky="nsew", padx=5)
+        right_panel.grid_rowconfigure(0, weight=1)
+        right_panel.grid_columnconfigure(0, weight=1)
+        right_panel.bind('<Button-1>', self.frame_click)
         
-        # Madde listesi
-        self.madde_listbox = tk.Listbox(sag_panel)
-        self.madde_listbox.grid(row=0, column=0, sticky="nsew", pady=5)
-        self.madde_listbox.bind('<<ListboxSelect>>', self.madde_sec)
+        # Item list
+        self.item_listbox = tk.Listbox(right_panel)
+        self.item_listbox.grid(row=0, column=0, sticky="nsew", pady=5)
+        self.item_listbox.bind('<<ListboxSelect>>', self.select_item)
         
-        # Madde listesi scrollbar
-        liste_scrollbar = ttk.Scrollbar(sag_panel, orient="vertical", 
-                                    command=self.madde_listbox.yview)
-        liste_scrollbar.grid(row=0, column=1, sticky="ns")
-        self.madde_listbox.configure(yscrollcommand=liste_scrollbar.set)
+        # Item list scrollbar
+        list_scrollbar = ttk.Scrollbar(right_panel, orient="vertical", 
+                                    command=self.item_listbox.yview)
+        list_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.item_listbox.configure(yscrollcommand=list_scrollbar.set)
         
-        # Madde kontrol butonları
-        kontrol_frame = ttk.Frame(sag_panel)
-        kontrol_frame.grid(row=1, column=0, columnspan=2, pady=5)
-        kontrol_frame.bind('<Button-1>', self.frame_tiklama)
+        # Item control buttons
+        control_frame = ttk.Frame(right_panel)
+        control_frame.grid(row=1, column=0, columnspan=2, pady=5)
+        control_frame.bind('<Button-1>', self.frame_click)
         
-        ttk.Button(kontrol_frame, text="Yukarı Taşı", 
-                command=self.yukari_tasi).grid(row=0, column=0, padx=2)
-        ttk.Button(kontrol_frame, text="Aşağı Taşı", 
-                command=self.asagi_tasi).grid(row=0, column=1, padx=2)
-        ttk.Button(kontrol_frame, text="Sil", 
-                command=self.madde_sil).grid(row=0, column=2, padx=2)
+        ttk.Button(control_frame, text="Move Up", 
+                command=self.move_up).grid(row=0, column=0, padx=2)
+        ttk.Button(control_frame, text="Move Down", 
+                command=self.move_down).grid(row=0, column=1, padx=2)
+        ttk.Button(control_frame, text="Delete", 
+                command=self.delete_item).grid(row=0, column=2, padx=2)
         
-        # Alt butonlar
-        alt_butonlar = ttk.Frame(self.ana_frame)
-        alt_butonlar.grid(row=2, column=0, columnspan=2, pady=5)
-        alt_butonlar.bind('<Button-1>', self.frame_tiklama)
+        # Bottom buttons
+        bottom_buttons = ttk.Frame(self.main_frame)
+        bottom_buttons.grid(row=2, column=0, columnspan=2, pady=5)
+        bottom_buttons.bind('<Button-1>', self.frame_click)
         
-        ttk.Button(alt_butonlar, text="Kaydet ve Ana Menüye Dön", 
-                command=self.kaydet_ve_don).grid(row=0, column=0, padx=5)
-        ttk.Button(alt_butonlar, text="Ana Menüye Dön", 
-                command=self.ana_menuye_don_sor).grid(row=0, column=1, padx=5)
+        ttk.Button(bottom_buttons, text="Save and Return to Main Menu", 
+                command=self.save_and_return).grid(row=0, column=0, padx=5)
+        ttk.Button(bottom_buttons, text="Return to Main Menu", 
+                command=self.ask_return_to_main_menu).grid(row=0, column=1, padx=5)
         
-        ttk.Button(alt_butonlar, text="Paylaş", 
-            command=self.test_paylas).grid(row=0, column=2, padx=5)
+        ttk.Button(bottom_buttons, text="Share", 
+            command=self.share_test).grid(row=0, column=2, padx=5)
+        self.update_item_list()
+        
 
-        # Mevcut maddeleri listele
-        self.madde_listesini_guncelle()
+    def frame_click(self, event):
 
-    def frame_tiklama(self, event):
-        # Event'in kaynağını kontrol et
         widget = event.widget
         
-        # Eğer tıklanan widget input alanlarından biri değilse
         if not isinstance(widget, (ttk.Entry, ScrolledText)):
-            # Seçili maddeyi temizle
             self.secili_madde_index = None
-            # Güncelle butonunu deaktif et
-            self.guncelle_buton.config(state='disabled')
-            # Ekle butonunu aktif et
-            self.ekle_buton.config(state='normal')
-            # Listbox seçimini temizle
-            self.madde_listbox.selection_clear(0, tk.END)
+            self.update_button.config(state='disabled')
+            self.add_button.config(state='normal')
+            self.item_listbox.selection_clear(0, tk.END)
 
-    def madde_sec(self, event):
-        if not self.madde_listbox.curselection():
+    def select_item(self, event):
+        if not self.item_listbox.curselection():
             return
             
-        self.secili_madde_index = self.madde_listbox.curselection()[0]
-        madde = self.test_maddeleri[self.secili_madde_index]
+        self.selected_item_index = self.item_listbox.curselection()[0]
+        item = self.test_items[self.selected_item_index]
         
-        # Form alanlarını doldur
-        self.alanlari_temizle()
-        self.madde_giris.insert(0, madde['madde'])
-        self.aciklama_giris.insert("1.0", madde['aciklama'])
-        self.adimlar_giris.insert("1.0", madde['adimlar'])
-        self.input_giris.insert("1.0", madde['input'])
-        self.output_giris.insert("1.0", madde['output'])
+        # Fill the form fields
+        self.clear_fields()
+        self.item_entry.insert(0, item['item'])
+        self.description_entry.insert("1.0", item['description'])
+        self.steps_entry.insert("1.0", item['steps'])
+        self.input_entry.insert("1.0", item['input'])
+        self.output_entry.insert("1.0", item['output'])
         
-        # Güncelle butonunu aktif et
-        self.guncelle_buton.config(state='normal')
-        self.ekle_buton.config(state='disabled')
+        # Enable update button
+        self.update_button.config(state='normal')
+        self.add_button.config(state='disabled')
 
-    def madde_guncelle(self):
-        if self.secili_madde_index is None:
+    def update_item(self):
+        if self.selected_item_index is None:
             return
             
-        yeni_madde = {
-            "madde": self.madde_giris.get(),
-            "aciklama": self.aciklama_giris.get("1.0", tk.END).strip(),
-            "adimlar": self.adimlar_giris.get("1.0", tk.END).strip(),
-            "input": self.input_giris.get("1.0", tk.END).strip(),
-            "output": self.output_giris.get("1.0", tk.END).strip()
+        new_item = {
+            "item": self.item_entry.get(),
+            "description": self.description_entry.get("1.0", tk.END).strip(),
+            "steps": self.steps_entry.get("1.0", tk.END).strip(),
+            "input": self.input_entry.get("1.0", tk.END).strip(),
+            "output": self.output_entry.get("1.0", tk.END).strip()
         }
         
-        self.test_maddeleri[self.secili_madde_index] = yeni_madde
-        self.madde_listesini_guncelle()
-        self.alanlari_temizle()
-        self.secili_madde_index = None
-        self.guncelle_buton.config(state='disabled')
-        self.ekle_buton.config(state='normal')
+        self.test_items[self.selected_item_index] = new_item
+        self.update_item_list()
+        self.clear_fields()
+        self.selected_item_index = None
+        self.update_button.config(state='disabled')
+        self.add_button.config(state='normal')
 
-    def yukari_tasi(self):
-        if not self.madde_listbox.curselection() or self.madde_listbox.curselection()[0] == 0:
+    def move_up(self):
+        if not self.item_listbox.curselection() or self.item_listbox.curselection()[0] == 0:
             return
             
-        idx = self.madde_listbox.curselection()[0]
-        self.test_maddeleri[idx], self.test_maddeleri[idx-1] = \
-            self.test_maddeleri[idx-1], self.test_maddeleri[idx]
-        self.madde_listesini_guncelle()
-        self.madde_listbox.selection_set(idx-1)
+        idx = self.item_listbox.curselection()[0]
+        self.test_items[idx], self.test_items[idx-1] = \
+            self.test_items[idx-1], self.test_items[idx]
+        self.update_item_list()
+        self.item_listbox.selection_set(idx-1)
 
-    def asagi_tasi(self):
-        if not self.madde_listbox.curselection() or \
-           self.madde_listbox.curselection()[0] == len(self.test_maddeleri) - 1:
+    def move_down(self):
+        if not self.item_listbox.curselection() or \
+           self.item_listbox.curselection()[0] == len(self.test_items) - 1:
             return
             
-        idx = self.madde_listbox.curselection()[0]
-        self.test_maddeleri[idx], self.test_maddeleri[idx+1] = \
-            self.test_maddeleri[idx+1], self.test_maddeleri[idx]
-        self.madde_listesini_guncelle()
-        self.madde_listbox.selection_set(idx+1)
+        idx = self.item_listbox.curselection()[0]
+        self.test_items[idx], self.test_items[idx+1] = \
+            self.test_items[idx+1], self.test_items[idx]
+        self.update_item_list()
+        self.item_listbox.selection_set(idx+1)
 
-    def madde_sil(self):
-        if not self.madde_listbox.curselection():
+    def delete_item(self):
+        if not self.item_listbox.curselection():
             return
             
-        if messagebox.askyesno("Onay", "Seçili maddeyi silmek istediğinizden emin misiniz?"):
-            idx = self.madde_listbox.curselection()[0]
-            del self.test_maddeleri[idx]
-            self.madde_listesini_guncelle()
-            self.alanlari_temizle()
-            self.secili_madde_index = None
-            self.guncelle_buton.config(state='disabled')
-            self.ekle_buton.config(state='normal')
+        if messagebox.askyesno("Confirmation", "Are you sure you want to delete the selected item?"):
+            idx = self.item_listbox.curselection()[0]
+            del self.test_items[idx]
+            self.update_item_list()
+            self.clear_fields()
+            self.selected_item_index = None
+            self.update_button.config(state='disabled')
+            self.add_button.config(state='normal')
 
-    def madde_listesini_guncelle(self):
-        self.madde_listbox.delete(0, tk.END)
-        for i, madde in enumerate(self.test_maddeleri, 1):
-            self.madde_listbox.insert(tk.END, f"{i}. {madde['madde']}")
+    def update_item_list(self):
+        self.item_listbox.delete(0, tk.END)
+        for i, item in enumerate(self.test_items, 1):
+            self.item_listbox.insert(tk.END, f"{i}. {item['item']}")
 
-    def madde_ekle(self):
-        if not self.madde_giris.get().strip():
-            messagebox.showerror("Hata", "Lütfen bir test maddesi giriniz!")
+    def add_item(self):
+        if not self.item_entry.get().strip():
+            messagebox.showerror("Error", "Please enter a test item!")
             return
             
-        yeni_madde = {
-            "madde": self.madde_giris.get(),
-            "aciklama": self.aciklama_giris.get("1.0", tk.END).strip(),
-            "adimlar": self.adimlar_giris.get("1.0", tk.END).strip(),
-            "input": self.input_giris.get("1.0", tk.END).strip(),
-            "output": self.output_giris.get("1.0", tk.END).strip()
+        new_item = {
+            "item": self.item_entry.get(),
+            "description": self.description_entry.get("1.0", tk.END).strip(),
+            "steps": self.steps_entry.get("1.0", tk.END).strip(),
+            "input": self.input_entry.get("1.0", tk.END).strip(),
+            "output": self.output_entry.get("1.0", tk.END).strip()
         }
         
-        self.test_maddeleri.append(yeni_madde)
-        self.madde_listesini_guncelle()
-        self.alanlari_temizle()
+        self.test_items.append(new_item)
+        self.update_item_list()
+        self.clear_fields()
         
-    def alanlari_temizle(self):
-        self.madde_giris.delete(0, tk.END)
-        self.aciklama_giris.delete("1.0", tk.END)
-        self.adimlar_giris.delete("1.0", tk.END)
-        self.input_giris.delete("1.0", tk.END)
-        self.output_giris.delete("1.0", tk.END)
+    def clear_fields(self):
+        self.item_entry.delete(0, tk.END)
+        self.description_entry.delete("1.0", tk.END)
+        self.steps_entry.delete("1.0", tk.END)
+        self.input_entry.delete("1.0", tk.END)
+        self.output_entry.delete("1.0", tk.END)
         
-    def kaydet_ve_don(self):
-        if not self.test_maddeleri:
-            messagebox.showerror("Hata", "Lütfen en az bir test maddesi ekleyiniz!")
+    def save_and_return(self):
+        if not self.test_items:
+            messagebox.showerror("Error", "Please add at least one test item!")
             return
             
-        test_verisi = {
-            "baslik": self.test_basligi,
-            "maddeler": self.test_maddeleri,
-            "son_guncelleme": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        test_data = {
+            "title": self.test_title,
+            "items": self.test_items,
+            "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
-        dosya_adi = os.path.join(self.tests_dizini, f"{self.test_basligi}.json")
+        file_name = os.path.join(self.tests_directory, f"{self.test_title}.json")
         
         try:
-            with open(dosya_adi, 'w', encoding='utf-8') as f:
-                json.dump(test_verisi, f, ensure_ascii=False, indent=4)
-            messagebox.showinfo("Başarılı", "Test başarıyla kaydedildi!")
-            self.ana_menu_olustur()
+            with open(file_name, 'w', encoding='utf-8') as f:
+                json.dump(test_data, f, ensure_ascii=False, indent=4)
+            messagebox.showinfo("Success", "Test saved successfully!")
+            self.create_main_menu()
         except Exception as e:
-            messagebox.showerror("Hata", f"Test kaydedilirken bir hata oluştu: {str(e)}")
+            messagebox.showerror("Error", f"An error occurred while saving the test: {str(e)}")
 
-    def ana_menuye_don_sor(self):
-        if messagebox.askyesno("Onay", "Kaydedilmemiş değişiklikler kaybolacak. Devam etmek istiyor musunuz?"):
-            self.ana_menu_olustur()
 
-    def baslat(self):
-        self.pencere.mainloop()
+    def confirm_return_to_main_menu(self):
+        if messagebox.askyesno("Confirmation", "Unsaved changes will be lost. Do you want to continue?"):
+            self.create_main_menu()
 
-    def madde_penceresi_olustur(self):
+    def start(self):
+        self.window.mainloop()
+
+    def create_item_window(self):
         try:
-            self.alt_butonlar_frame = ttk.Frame(self.sag_frame)
-            self.alt_butonlar_frame.grid(row=14, column=0, pady=10, sticky="ew")
+            self.bottom_buttons_frame = ttk.Frame(self.right_frame)
+            self.bottom_buttons_frame.grid(row=14, column=0, pady=10, sticky="ew")
             
-            self.ana_menu_btn = ttk.Button(self.alt_butonlar_frame, text="Ana Menüye Dön", command=self.ana_menuye_don)
-            self.ana_menu_btn.pack(side=tk.LEFT, padx=5)
+            self.main_menu_btn = ttk.Button(self.bottom_buttons_frame, text="Return to Main Menu", command=self.confirm_return_to_main_menu)
+            self.main_menu_btn.pack(side=tk.LEFT, padx=5)
             
-            self.paylas_btn = ttk.Button(self.alt_butonlar_frame, text="Paylaş")
-            self.paylas_btn.pack(side=tk.LEFT, padx=10)
+            self.share_btn = ttk.Button(self.bottom_buttons_frame, text="Share")
+            self.share_btn.pack(side=tk.LEFT, padx=10)
             
         except Exception as e:
-            print(f"Madde penceresi oluşturma hatası: {str(e)}")
+            print(f"Error creating item window: {str(e)}")
 
-    def test_paylas(self):
+    def share_test(self):
         try:
-            if not self.test_maddeleri:
-                messagebox.showerror("Hata", "Paylaşılacak test maddesi bulunamadı!")
+            if not self.test_items:
+                messagebox.showerror("Error", "No test items available for sharing!")
                 return
                 
-            alici_mail = simpledialog.askstring("Mail Adresi", 
-                "Lütfen alıcı mail adresini girin:")
-                
-            if not alici_mail:
+            recipient_email = simpledialog.askstring("Email Address", "Please enter the recipient's email address:")
+            
+            if not recipient_email:
                 return
                 
-            if not '@' in alici_mail or not '.' in alici_mail:
-                messagebox.showerror("Hata", "Geçersiz mail adresi!")
+            if '@' not in recipient_email or '.' not in recipient_email:
+                messagebox.showerror("Error", "Invalid email address!")
                 return
                 
             test_data = {
-                'baslik': self.test_basligi,
-                'test_maddeleri': self.test_maddeleri,
-                'tarih': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                'title': self.test_title,
+                'test_items': self.test_items,
+                'date': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             
             json_data = json.dumps(test_data, indent=4, ensure_ascii=False)
             
-            self.mail_gonder(alici_mail, json_data)
+            self.send_email(recipient_email, json_data)
             
         except Exception as e:
-            messagebox.showerror("Hata", f"Test paylaşımı sırasında bir hata oluştu: {str(e)}")
+            messagebox.showerror("Error", f"An error occurred while sharing the test: {str(e)}")
 
-    def mail_gonder(self, alici_mail, json_data):
+    def send_email(self, recipient_email, json_data):
         try:
-            gonderen_mail = "" #mail addresses
-            mail_sifre = "" #1 time password
+            sender_email = "" # email address
+            email_password = "" # one-time password
             
             msg = MIMEMultipart()
-            msg['From'] = gonderen_mail
-            msg['To'] = alici_mail
-            msg['Subject'] = "Test Paylaşımı"
+            msg['From'] = sender_email
+            msg['To'] = recipient_email
+            msg['Subject'] = "Test Sharing"
             
             body = f"""
-            Merhaba,
+            Hello,
             
-            {self.test_basligi} başlıklı test verilerini ekte bulabilirsiniz.
+            Please find the test data for {self.test_title} attached.
             
-            İyi çalışmalar.
+            Best regards.
             """
             msg.attach(MIMEText(body, 'plain', 'utf-8'))
             
             json_attachment = MIMEApplication(json_data.encode('utf-8'))
-            json_attachment.add_header('Content-Disposition', 'attachment', 
-                                 filename=f'{self.test_basligi}_test_verileri.json')
+            json_attachment.add_header('Content-Disposition', 'attachment', filename=f'{self.test_title}_test_data.json')
             msg.attach(json_attachment)
             
             with smtplib.SMTP('smtp.gmail.com', 587) as server:
-                server.starttls()  # Güvenli bağlantı
-                server.login(gonderen_mail, mail_sifre)
-                server.sendmail(gonderen_mail, alici_mail, msg.as_string())
+                server.starttls()  # Secure connection
+                server.login(sender_email, email_password)
+                server.sendmail(sender_email, recipient_email, msg.as_string())
 
-            messagebox.showinfo("Başarılı", f"Test verileri {alici_mail} adresine gönderildi!")
+            messagebox.showinfo("Success", f"Test data has been sent to {recipient_email}!")
             
         except smtplib.SMTPAuthenticationError:
-            messagebox.showerror("Hata", 
-                "Mail gönderimi için kimlik doğrulama başarısız! \n"
-                "Lütfen mail adresinizi ve uygulama şifrenizi kontrol edin.")
+            messagebox.showerror("Error", 
+                "Authentication failed for email sending! \n"
+                "Please check your email address and application password.")
         
         except smtplib.SMTPException as e:
-            messagebox.showerror("Hata", 
-                f"Mail gönderimi sırasında SMTP hatası oluştu: {str(e)}")
+            messagebox.showerror("Error", 
+                f"An SMTP error occurred during email sending: {str(e)}")
             
         except Exception as e:
-            messagebox.showerror("Hata", 
-                f"Mail gönderimi sırasında beklenmeyen bir hata oluştu: {str(e)}")
+            messagebox.showerror("Error", 
+                f"An unexpected error occurred during email sending: {str(e)}")
+            
+    def start(self):
+        self.window.mainloop()
 
 if __name__ == "__main__":
-    uygulama = TestUygulamasi()
-    uygulama.baslat()
+    app = TestApplication()
+    app.start()
